@@ -2,8 +2,8 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2021/7/8 11:30
 import json
-from data_version import DataVersion
-from utils import get_id
+from myvc.data_version import DataVersion
+from myvc.utils import get_id
 
 
 class DBInfo:

@@ -5,7 +5,8 @@ import json
 import os
 from typing import List
 
-from db_info import DBInfo
+from myvc.db_info import DBInfo
+from myvc.config import DATA_PATH
 
 
 class DBs:
@@ -32,8 +33,7 @@ class DBs:
         _ = []
         for db_info in self.dbs:
             _.append(db_info.to_json())
-        path = os.path.join(os.path.dirname(__file__), 'dbs')
-        with open(path, 'w') as f:
+        with open(DATA_PATH, 'w') as f:
             json.dump(_, f)
 
     @classmethod
@@ -41,9 +41,8 @@ class DBs:
         # type: () -> DBs
         dbs = DBs()
 
-        path = os.path.join(os.path.dirname(__file__), 'dbs')
-        if os.path.exists(path):
-            with open(path, 'rb') as f:
+        if os.path.exists(DATA_PATH):
+            with open(DATA_PATH, 'rb') as f:
                 _dict = json.load(f)
             for db_info in _dict:
                 dbs.dbs.append(DBInfo.load_from_json(db_info))

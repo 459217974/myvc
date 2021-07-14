@@ -1,0 +1,4 @@
+# Include requirements.txt
+include requirements.txt
+# Include configs
+include src/myvc/configs

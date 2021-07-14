@@ -10,11 +10,11 @@ from docker.models.containers import Container
 from docker.errors import NotFound
 from tabulate import tabulate
 
-from data_version import DataVersion
-from db_info import DBInfo
-from dbs import DBs
-from utils import get_id, is_port_in_use, get_current_datetime_str
-from config import MYSQL_IMAGE_NAME, MYSQL_VERSION
+from myvc.data_version import DataVersion
+from myvc.db_info import DBInfo
+from myvc.dbs import DBs
+from myvc.utils import get_id, is_port_in_use, get_current_datetime_str
+from myvc.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH
 
 client = docker.from_env()
 dbs = None  # type: DBs
@@ -69,10 +69,7 @@ def init_mysql_conf_volume(volume=None):
         assert _, 'volume {} not exists'.format(volume)
         volume = _
 
-    conf_dir = os.path.join(
-        os.path.dirname(__file__), 'conf.d'
-    )
-    if os.path.exists(conf_dir):
+    if os.path.exists(CONF_D_PATH):
         image = get_mysql_image()
         temp_name = get_id()
         client.containers.run(
@@ -80,12 +77,12 @@ def init_mysql_conf_volume(volume=None):
             command='bash',
             remove=True,
             volumes={
-                volume.name: {'bind': '/etc/mysql/conf.d', 'mode': 'rw'}
+                volume.name: {'bind': '/etc/mysql/configs', 'mode': 'rw'}
             },
             detach=True, stdout=True, stderr=True, tty=True
         )
         container = get_container_by_name(temp_name)
-        for path, _, file_names in os.walk(conf_dir):
+        for path, _, file_names in os.walk(CONF_D_PATH):
             for file_name in file_names:
                 if not file_name.endswith('cnf'):
                     continue

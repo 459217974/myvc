@@ -3,9 +3,9 @@
 # Created by CaoDa on 2021/7/11 18:17
 from docopt import docopt
 import questionary
-from methods import Persistence
-from utils import is_port_in_use
-import methods as myvc_methods
+from myvc.methods import Persistence
+from myvc.utils import is_port_in_use
+import myvc.methods as myvc_methods
 
 
 def not_empty_text_validator(text):

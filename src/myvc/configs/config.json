@@ -1,0 +1,4 @@
+{
+  "MYSQL_IMAGE_NAME": "mysql",
+  "MYSQL_VERSION": "5.7"
+}
