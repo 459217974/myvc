@@ -72,18 +72,19 @@ doc = '''
 MySQL Version Control
 
 Usage:
-    myvc.py ls
-    myvc.py show db
-    myvc.py new db
-    myvc.py start db
-    myvc.py stop db
-    myvc.py rm db
-    myvc.py new branch
-    myvc.py use branch
-    myvc.py copy branch
-    myvc.py clear branch
-    myvc.py rm branch
-    myvc.py run sql
+    myvc ls
+    myvc show db
+    myvc new db
+    myvc start db
+    myvc stop db
+    myvc rm db
+    myvc new branch
+    myvc use branch
+    myvc copy branch
+    myvc clear branch
+    myvc rm branch
+    myvc run sql
+    myvc reset db conf
 '''
 
 
@@ -148,6 +149,12 @@ def main():
             if db_name is None:
                 exit(0)
             myvc_methods.apply_sql(db_id, sql_path, db_name)
+        elif arguments['reset'] and arguments['db'] and arguments['conf']:
+            db_id = select_db()
+            db_info = myvc_methods.dbs.get_db_info_by_id(db_id)
+            myvc_methods.stop_db(db_id)
+            myvc_methods.init_mysql_conf_volume(db_info.conf_volume)
+            myvc_methods.start_db(db_id)
 
 
 if __name__ == '__main__':

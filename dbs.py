@@ -49,17 +49,3 @@ class DBs:
                 dbs.dbs.append(DBInfo.load_from_json(db_info))
 
         return dbs
-
-# i = DBInfo()
-# i.name = 'test'
-# i.port = 3307
-# i.version = v1
-#
-# ds = DBs()
-# ds.dbs.append(i)
-#
-# ds.save()
-#
-# ds = DBs.load()
-#
-# print(ds.dbs[0].version.to_json())

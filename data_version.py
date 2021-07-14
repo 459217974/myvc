@@ -4,8 +4,6 @@
 import json
 from typing import List
 
-import tabulate
-
 
 class DataVersion:
 

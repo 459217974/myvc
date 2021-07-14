@@ -14,17 +14,17 @@ from data_version import DataVersion
 from db_info import DBInfo
 from dbs import DBs
 from utils import get_id, is_port_in_use, get_current_datetime_str
+from config import MYSQL_IMAGE_NAME, MYSQL_VERSION
 
-MYSQL_IMAGE_NAME = 'mysql'
-MYSQL_VERSION = '5.7'
-MYSQL_IMAGE_NAME = '{}:{}'.format(MYSQL_IMAGE_NAME, MYSQL_VERSION)
 client = docker.from_env()
+dbs = None  # type: DBs
 
 
 def get_mysql_image():
-    if not client.images.list(name=MYSQL_IMAGE_NAME):
+    name = '{}:{}'.format(MYSQL_IMAGE_NAME, MYSQL_VERSION)
+    if not client.images.list(name=name):
         client.images.pull(MYSQL_IMAGE_NAME, MYSQL_VERSION)
-    return client.images.get(name=MYSQL_IMAGE_NAME)
+    return client.images.get(name=name)
 
 
 def get_volume_by_name(name):
@@ -63,11 +63,16 @@ def send_file(container: Container, file_path, container_path):
 
 def init_mysql_conf_volume(volume=None):
     if not volume:
-        volume = client.volumes.create(get_id()).name
-    my_cnf_path = os.path.join(
-        os.path.dirname(__file__), 'my.cnf'
+        volume = client.volumes.create(get_id())
+    else:
+        _ = get_volume_by_name(volume)
+        assert _, 'volume {} not exists'.format(volume)
+        volume = _
+
+    conf_dir = os.path.join(
+        os.path.dirname(__file__), 'conf.d'
     )
-    if os.path.exists(my_cnf_path):
+    if os.path.exists(conf_dir):
         image = get_mysql_image()
         temp_name = get_id()
         client.containers.run(
@@ -75,12 +80,16 @@ def init_mysql_conf_volume(volume=None):
             command='bash',
             remove=True,
             volumes={
-                volume: {'bind': '/etc/mysql/conf.d', 'mode': 'rw'}
+                volume.name: {'bind': '/etc/mysql/conf.d', 'mode': 'rw'}
             },
             detach=True, stdout=True, stderr=True, tty=True
         )
         container = get_container_by_name(temp_name)
-        send_file(container, my_cnf_path, '/etc/mysql/conf.d/')
+        for path, _, file_names in os.walk(conf_dir):
+            for file_name in file_names:
+                if not file_name.endswith('cnf'):
+                    continue
+                send_file(container, os.path.join(path, file_name), '/etc/mysql/conf.d/')
         container.stop()
     return volume
 
@@ -381,24 +390,3 @@ class Persistence:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_type:
             dbs.save()
-
-
-if __name__ == '__main__':
-    dbs = DBs.load()
-
-    # init_mysql_conf_volume()
-    # new_db('test', 3307, 'q1w2e3r4')
-    # list_dbs()
-    # rm_db('6c50f542-ec2e-4787-8321-79fbf793a3fe')
-    # rm_db('6116f3bd5')
-    # stop_db('5795e7e7-e8fc-40f9-a709-71b431eb9cb8')
-    # start_db('6c50f542-ec2e-4787-8321-79fbf793a3fe')
-    # backup_version('6116f3bd5', 'version3', '616fe21c7')
-    # list_versions('5795e7e7-e8fc-40f9-a709-71b431eb9cb8')
-    # apply_version('6116f3bd5', '618f0da09')
-    # apply_sql('6c50f542-ec2e-4787-8321-79fbf793a3fe', '../../../Downloads/init.sql')
-    # apply_sql('6c50f542-ec2e-4787-8321-79fbf793a3fe', '../../../Downloads/QACommons__2021-06-28-11-42-03.sql', 'QACommonS')
-    # rm_version('6116f3bd5', '616466c1b')
-    # db_detail('64bf516a4')
-
-    dbs.save()
