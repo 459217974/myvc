@@ -9,12 +9,11 @@ from io import BytesIO
 from docker.models.containers import Container
 from docker.errors import NotFound
 from tabulate import tabulate
-
-from myvc.data_version import DataVersion
-from myvc.db_info import DBInfo
-from myvc.dbs import DBs
-from myvc.utils import get_id, is_port_in_use, get_current_datetime_str
-from myvc.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH
+from myvc_app.data_version import DataVersion
+from myvc_app.db_info import DBInfo
+from myvc_app.dbs import DBs
+from myvc_app.utils import get_id, is_port_in_use, get_current_datetime_str
+from myvc_app.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH
 
 client = docker.from_env()
 dbs = None  # type: DBs
@@ -50,6 +49,18 @@ def get_container_by_name(name) -> Container:
         )
     )
     return containers[0] if containers else None
+
+
+def check_is_running(db_id):
+    db_info = dbs.get_db_info_by_id(db_id)
+    if not db_info:
+        raise Exception('{} not exists'.format(db_id))
+    if not db_info.container_id:
+        raise Exception("{} don't have running container".format(db_info.name))
+    container = client.containers.get(db_info.container_id)  # type: Container
+    if container.status != 'running':
+        raise Exception("{}'s container is not running".format(db_info.name))
+    return db_info, container
 
 
 def send_file(container: Container, file_path, container_path):
@@ -288,27 +299,21 @@ def copy_from(db_id, from_volume):
 
 
 def apply_sql(db_id, sql_path, database_name=None):
+    sql_path = os.path.expanduser(sql_path)
     if not os.path.exists(sql_path):
         raise Exception('{} not exists'.format(sql_path))
     sql_path = os.path.abspath(sql_path)
-    db_info = dbs.get_db_info_by_id(db_id)
-    if not db_info:
-        raise Exception('{} not exists'.format(db_id))
-    if not db_info.container_id:
-        raise Exception("{} don't have running container".format(db_info.name))
-    container = client.containers.get(db_info.container_id)  # type: Container
-    if container.status != 'running':
-        raise Exception("{}'s container is not running".format(db_info.name))
+    db_info, container = check_is_running(db_id)
     send_file(container, sql_path, '/')
     if database_name:
         print(container.exec_run(
-            "bash -c 'exec mysql -u root -p{} -D {} < /{}'".format(
+            "bash -c 'exec mysql -u root -p{} -D {} < \"/{}\"'".format(
                 db_info.password, database_name, os.path.basename(sql_path)
             )
         ).output.decode())
     else:
         print(container.exec_run(
-            "bash -c 'exec mysql -u root -p{} < /{}'".format(db_info.password, os.path.basename(sql_path))
+            "bash -c 'exec mysql -u root -p{} < \"/{}\"'".format(db_info.password, os.path.basename(sql_path))
         ).output.decode())
 
 
@@ -335,6 +340,8 @@ def backup_version(db_id, name, volume=None):
 
     if volume == db_info.current_version:
         start_db(db_id)
+
+    return backup_volume.id
 
 
 def list_dbs():
@@ -376,6 +383,15 @@ def list_versions(db_id):
     if not db_info:
         raise Exception('{} not exists'.format(db_id))
     print(db_info.version)
+
+
+def db_shell(db_id):
+    db_info, container = check_is_running(db_id)
+    os.system(
+        "docker exec -it {} bash -c 'mysql -u root -p{}'".format(
+            db_info.container_id, db_info.password
+        )
+    )
 
 
 class Persistence:

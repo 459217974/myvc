@@ -15,7 +15,7 @@ with open("requirements.txt", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="myvc",
-    version="0.0.1",
+    version="0.0.2",
     author="CaoDa",
     author_email="459217974@qq.com",
     description="A MySQL Version Control Util",
@@ -37,7 +37,7 @@ setuptools.setup(
     python_requires=">=3.6",
     install_requires=install_requires,
     entry_points={
-        'console_scripts': ['myvc=myvc.myvc:main'],
+        'console_scripts': ['myvc=myvc_app.myvc:main'],
     },
     include_package_data=True,
 )

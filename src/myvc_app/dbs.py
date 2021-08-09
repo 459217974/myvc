@@ -5,8 +5,8 @@ import json
 import os
 from typing import List
 
-from myvc.db_info import DBInfo
-from myvc.config import DATA_PATH
+from myvc_app.db_info import DBInfo
+from myvc_app.config import DATA_PATH
 
 
 class DBs:
