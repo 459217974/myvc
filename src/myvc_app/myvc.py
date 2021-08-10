@@ -113,9 +113,9 @@ def select_commands(command_from_cmd_line=None):
     if command_from_cmd_line in commands:
         return command_from_cmd_line
     command = questionary.select(
-        'Enter your command',
+        'Choice a command',
         choices=[
-            questionary.Choice(title=v, value=k)
+            questionary.Choice(title='[{}] {}'.format(k, v), value=k)
             for k, v in commands.items()
         ],
         use_shortcuts=True
