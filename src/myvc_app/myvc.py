@@ -2,6 +2,7 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2021/7/11 18:17
 from collections import OrderedDict
+import argparse
 import questionary
 import pymysql
 from myvc_app.methods import Persistence
@@ -92,7 +93,7 @@ def select_mysql_database(db_id):
     return database_name
 
 
-def select_commands():
+def select_commands(command_from_cmd_line=None):
     commands = OrderedDict({
         'ls': "show all existed db",
         'show db': "show a db's detail",
@@ -109,18 +110,27 @@ def select_commands():
         'reset db conf': "replace mysql conf by .cny files in config directory",
         'db shell': "get mysql shell"
     })
-    command = questionary.autocomplete(
+    if command_from_cmd_line in commands:
+        return command_from_cmd_line
+    command = questionary.select(
         'Enter your command',
-        choices=list(commands.keys()),
-        meta_information=commands,
-        validate=lambda x: x in commands
+        choices=[
+            questionary.Choice(title=v, value=k)
+            for k, v in commands.items()
+        ],
+        use_shortcuts=True
     ).ask()
+    if command is None:
+        exit(0)
     return command
 
 
 def main():
     with Persistence():
-        command = select_commands()
+        parser = argparse.ArgumentParser()
+        parser.add_argument('command', nargs='*')
+        args = parser.parse_args()
+        command = select_commands(' '.join(args.command).strip())
         if command == 'ls':
             myvc_methods.list_dbs()
         elif command == 'show db':
