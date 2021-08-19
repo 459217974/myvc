@@ -88,7 +88,7 @@ def init_mysql_conf_volume(volume=None):
             command='bash',
             remove=True,
             volumes={
-                volume.name: {'bind': '/etc/mysql/configs', 'mode': 'rw'}
+                volume.name: {'bind': '/etc/mysql/conf.d/', 'mode': 'rw'}
             },
             detach=True, stdout=True, stderr=True, tty=True
         )
