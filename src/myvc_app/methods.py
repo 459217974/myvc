@@ -4,8 +4,10 @@
 import os
 import docker
 import tarfile
+import gzip
 import questionary
 from io import BytesIO
+from tempfile import NamedTemporaryFile
 from docker.models.containers import Container
 from docker.errors import NotFound
 from tabulate import tabulate
@@ -304,16 +306,28 @@ def apply_sql(db_id, sql_path, database_name=None):
         raise Exception('{} not exists'.format(sql_path))
     sql_path = os.path.abspath(sql_path)
     db_info, container = check_is_running(db_id)
-    send_file(container, sql_path, '/')
+    if sql_path.endswith('.gz'):
+        try:
+            sql_file_content = gzip.GzipFile(sql_path).read()
+            with NamedTemporaryFile(buffering=0, suffix='.sql') as sql_file:
+                sql_file.write(sql_file_content)
+                sql_file_name = os.path.basename(sql_file.name)
+                send_file(container, sql_file.name, '/')
+        except Exception as e:
+            questionary.print('parse sql file failed -> {}'.format(e))
+            exit(0)
+    else:
+        send_file(container, sql_path, '/')
+        sql_file_name = os.path.basename(sql_path)
     if database_name:
         print(container.exec_run(
             "bash -c 'exec mysql -u root -p{} -D {} < \"/{}\"'".format(
-                db_info.password, database_name, os.path.basename(sql_path)
+                db_info.password, database_name, sql_file_name
             )
         ).output.decode())
     else:
         print(container.exec_run(
-            "bash -c 'exec mysql -u root -p{} < \"/{}\"'".format(db_info.password, os.path.basename(sql_path))
+            "bash -c 'exec mysql -u root -p{} < \"/{}\"'".format(db_info.password, sql_file_name)
         ).output.decode())
 
 
