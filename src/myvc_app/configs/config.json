@@ -1,4 +1,5 @@
 {
   "MYSQL_IMAGE_NAME": "mysql",
-  "MYSQL_VERSION": "5.7"
+  "MYSQL_VERSION": "5.7",
+  "DOCKER_CLIENT_BASE_URL": ""
 }

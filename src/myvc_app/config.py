@@ -32,3 +32,4 @@ with open(CONFIG_PATH, 'rb') as f:
     cfg = json.load(f)
     MYSQL_IMAGE_NAME = cfg['MYSQL_IMAGE_NAME']
     MYSQL_VERSION = cfg['MYSQL_VERSION']
+    DOCKER_CLIENT_BASE_URL = cfg['DOCKER_CLIENT_BASE_URL']

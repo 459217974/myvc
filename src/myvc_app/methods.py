@@ -15,9 +15,12 @@ from myvc_app.data_version import DataVersion
 from myvc_app.db_info import DBInfo
 from myvc_app.dbs import DBs
 from myvc_app.utils import get_id, is_port_in_use, get_current_datetime_str
-from myvc_app.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH
+from myvc_app.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH, DOCKER_CLIENT_BASE_URL
 
-client = docker.from_env()
+if DOCKER_CLIENT_BASE_URL:
+    client = docker.DockerClient(DOCKER_CLIENT_BASE_URL)
+else:
+    client = docker.DockerClient.from_env()
 dbs = None  # type: DBs
 
 
