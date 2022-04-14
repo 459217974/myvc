@@ -2,3 +2,4 @@ docker
 tabulate
 questionary
 pymysql
+peewee

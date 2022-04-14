@@ -2,7 +2,7 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2021/7/8 11:30
 import json
-from myvc_app.data_version import DataVersion
+from myvc_app.old_data_manager.data_version import DataVersion
 from myvc_app.utils import get_id
 
 
