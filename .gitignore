@@ -2,3 +2,5 @@ venv
 dist
 *.pyc
 src/myvc.egg-info
+.idea
+.DS_Store
