@@ -10,6 +10,7 @@ import pymysql
 from pymysql.cursors import DictCursor
 from tabulate import tabulate
 
+from myvc_app import init
 from myvc_app.models.models import DBInfo, DataVersion
 from myvc_app.utils import is_port_in_use
 import myvc_app.methods as myvc_methods

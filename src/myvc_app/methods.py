@@ -17,10 +17,7 @@ from myvc_app.models.base import DB
 from myvc_app.models.models import DBInfo, DataVersion
 from myvc_app.utils import get_id, is_port_in_use
 from myvc_app.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH, DOCKER_CLIENT_BASE_URL
-from myvc_app.init import init, migrate
 
-init()
-migrate()
 if DOCKER_CLIENT_BASE_URL:
     client = docker.DockerClient(DOCKER_CLIENT_BASE_URL)
 else:
