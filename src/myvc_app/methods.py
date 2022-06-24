@@ -241,6 +241,7 @@ def stop_db(db_id: int):
         try:
             container = client.containers.get(db_info.container_id)  # type: Container
             container.stop()
+            container.wait()
             container.remove()
             db_info.container_id = None
             db_info.save()
@@ -249,6 +250,7 @@ def stop_db(db_id: int):
     possible_container = get_container_by_name(f'myvc.{db_id}')
     if possible_container:
         possible_container.kill()
+        possible_container.wait()
         possible_container.remove()
         if db_info:
             db_info.container_id = None
