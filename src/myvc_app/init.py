@@ -2,35 +2,14 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2022/4/9 10:33
 import os
-import json
-import shutil
 import pathlib
 import importlib.util
-
 from myvc_app import config
 
 
 def init():
-    config_path = config.USER_HOME_DIR.joinpath('.myvc')
-    if not config_path.exists():
-        os.makedirs(config_path)
-        os.makedirs(config_path.joinpath('conf.d'))
-    if not config_path.joinpath('config.json').exists():
-        shutil.copy(
-            config.DEFAULT_CONFIGS_PATH.joinpath('config.json'),
-            config_path.joinpath('config.json')
-        )
-    if not list(config_path.joinpath('conf.d').iterdir()):
-        shutil.copy(
-            config.DEFAULT_CONFIGS_PATH.joinpath('example.cnf'),
-            config_path.joinpath('conf.d/example.cnf')
-        )
-
-    with open(config.CONFIG_PATH, 'rb') as f:
-        cfg = json.load(f)
-        config.MYSQL_IMAGE_NAME = cfg['MYSQL_IMAGE_NAME']
-        config.MYSQL_VERSION = cfg['MYSQL_VERSION']
-        config.DOCKER_CLIENT_BASE_URL = cfg['DOCKER_CLIENT_BASE_URL']
+    if not config.APP_DATA_DIR.exists():
+        os.makedirs(config.APP_DATA_DIR)
 
     import myvc_app.signals
     from myvc_app.models.base import DB

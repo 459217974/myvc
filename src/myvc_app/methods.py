@@ -2,6 +2,9 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2021/6/30 13:55
 import os
+from pathlib import Path
+from typing import Union
+
 import docker
 import tarfile
 import gzip
@@ -14,20 +17,22 @@ from docker.models.images import Image
 from docker.models.volumes import Volume
 
 from myvc_app.models.base import DB
-from myvc_app.models.models import DBInfo, DataVersion
+from myvc_app.models.models import DBInfo, DataVersion, MySQLConf, Config
 from myvc_app.utils import get_id, is_port_in_use
-from myvc_app.config import MYSQL_IMAGE_NAME, MYSQL_VERSION, CONF_D_PATH, DOCKER_CLIENT_BASE_URL
 
+DOCKER_CLIENT_BASE_URL = Config.get_or_none(key='DOCKER_CLIENT_BASE_URL')  # type: Config
 if DOCKER_CLIENT_BASE_URL:
-    client = docker.DockerClient(DOCKER_CLIENT_BASE_URL)
+    client = docker.DockerClient(DOCKER_CLIENT_BASE_URL.value)
 else:
     client = docker.DockerClient.from_env()
 
 
 def get_mysql_image() -> Image:
-    name = '{}:{}'.format(MYSQL_IMAGE_NAME, MYSQL_VERSION)
+    mysql_image_name = Config.get(key='MYSQL_IMAGE_NAME')  # type: Config
+    mysql_version = Config.get(key='MYSQL_VERSION')  # type: Config
+    name = '{}:{}'.format(mysql_image_name.value, mysql_version.value)
     if not client.images.list(name=name):
-        client.images.pull(MYSQL_IMAGE_NAME, MYSQL_VERSION)
+        client.images.pull(mysql_image_name.value, mysql_version.value)
     return client.images.get(name=name)
 
 
@@ -66,38 +71,45 @@ def check_is_running(db_id: int) -> (DBInfo, Container):
     return db_info, container
 
 
-def send_file(container: Container, file_path, container_path):
+def send_file(
+        container: Container, file_or_path: Union[Path, str],
+        file_name: Union[Path, str], container_path: Union[Path, str]
+):
     temp_file = BytesIO()
     zip_sql = tarfile.TarFile(fileobj=temp_file, mode='w')
-    zip_sql.add(file_path, arcname=os.path.basename(file_path))
+    zip_sql.add(file_or_path, arcname=Path(file_name).name)
     zip_sql.close()
     temp_file.seek(0)
     container.put_archive(container_path, temp_file.read())
 
 
-def init_mysql_conf_volume(volume: Volume = None) -> Volume:
+def init_mysql_conf_volume(volume: Volume = None, conf_name: str = None) -> Volume:
     if not volume:
         volume = client.volumes.create(get_id())
+    else:
+        clean_volume(volume)
 
-    if os.path.exists(CONF_D_PATH):
-        image = get_mysql_image()
-        temp_name = get_id()
-        client.containers.run(
-            image, name=temp_name,
-            command='bash',
-            remove=True,
-            volumes={
-                volume.name: {'bind': '/etc/mysql/conf.d/', 'mode': 'rw'}
-            },
-            detach=True, stdout=True, stderr=True, tty=True
-        )
-        container = get_container_by_name(temp_name)
-        for path, _, file_names in os.walk(CONF_D_PATH):
-            for file_name in file_names:
-                if not file_name.endswith('cnf'):
-                    continue
-                send_file(container, os.path.join(path, file_name), '/etc/mysql/conf.d/')
-        container.stop()
+    if not conf_name:
+        conf = MySQLConf.select().order_by(MySQLConf.id).first()  # type: MySQLConf
+    else:
+        conf = MySQLConf.get(name=conf_name)  # type: MySQLConf
+
+    image = get_mysql_image()
+    temp_name = get_id()
+    client.containers.run(
+        image, name=temp_name,
+        command='bash',
+        remove=True,
+        volumes={
+            volume.name: {'bind': '/etc/mysql/conf.d/', 'mode': 'rw'}
+        },
+        detach=True, stdout=True, stderr=True, tty=True
+    )
+    container = get_container_by_name(temp_name)
+    with NamedTemporaryFile(buffering=0, suffix='.cnf') as cnf_file:
+        cnf_file.write(conf.content.encode('utf8'))
+        send_file(container, cnf_file.name, '{}.cnf'.format(conf.name), '/etc/mysql/conf.d/')
+    container.stop()
     return volume
 
 
@@ -147,7 +159,6 @@ def init_container(db_info: DBInfo) -> Container:
         ports={'3306/tcp': db_info.port},
         environment={'MYSQL_ROOT_PASSWORD': db_info.password},
         detach=True,
-        remove=True,
     )
     return container
 
@@ -306,13 +317,13 @@ def apply_sql(db_id: int, sql_path, database_name: str = None):
             with NamedTemporaryFile(buffering=0, suffix='.sql') as sql_file:
                 sql_file.write(sql_file_content)
                 sql_file_name = os.path.basename(sql_file.name)
-                send_file(container, sql_file.name, '/')
+                send_file(container, sql_file.name, sql_file_name, '/')
         except Exception as e:
             questionary.print('parse sql file failed -> {}'.format(e))
             exit(0)
     else:
-        send_file(container, sql_path, '/')
         sql_file_name = os.path.basename(sql_path)
+        send_file(container, sql_path, sql_file_name, '/')
     if database_name:
         print(container.exec_run(
             "bash -c 'exec mysql -u root -p{} -D {} < \"/{}\"'".format(

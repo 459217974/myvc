@@ -15,7 +15,7 @@ with open("requirements.txt", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="myvc",
-    version="0.0.8",
+    version="0.0.9",
     author="CaoDa",
     author_email="459217974@qq.com",
     description="A MySQL Version Control Util",

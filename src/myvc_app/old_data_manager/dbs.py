@@ -6,7 +6,9 @@ import os
 from typing import List
 
 from myvc_app.old_data_manager.db_info import DBInfo
-from myvc_app.config import OLD_DATA_PATH
+from myvc_app.config import APP_DATA_DIR
+
+OLD_DATA_PATH = APP_DATA_DIR.joinpath('data')
 
 
 class DBs:

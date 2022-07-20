@@ -2,9 +2,7 @@
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2022/4/9 10:42
 from typing import List
-
-from peewee import CharField, ForeignKeyField, DeferredForeignKey, IntegerField
-
+from peewee import CharField, ForeignKeyField, DeferredForeignKey, IntegerField, TextField
 from myvc_app.models.base import BaseModel
 
 
@@ -65,3 +63,13 @@ class DBInfo(BaseModel):
     @property
     def root_version(self) -> DataVersion:
         return DataVersion.get(parent=None, db=self)
+
+
+class Config(BaseModel):
+    key = CharField()
+    value = CharField()
+
+
+class MySQLConf(BaseModel):
+    name = CharField()
+    content = TextField()

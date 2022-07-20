@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 # -*- encoding: UTF-8 -*-
 # Created by CaoDa on 2021/7/11 18:17
+import datetime
+import json
+import os
+import subprocess
 from collections import OrderedDict
 import argparse
+from tempfile import NamedTemporaryFile
 from typing import Union
 
 import questionary
@@ -10,8 +15,9 @@ import pymysql
 from pymysql.cursors import DictCursor
 from tabulate import tabulate
 
-from myvc_app import init
-from myvc_app.models.models import DBInfo, DataVersion
+from myvc_app import init  # This import is to complete some initialization operations
+from myvc_app.models.base import DB
+from myvc_app.models.models import DBInfo, DataVersion, Config, MySQLConf
 from myvc_app.utils import is_port_in_use
 import myvc_app.methods as myvc_methods
 
@@ -135,6 +141,61 @@ def list_versions(db_id):
     print(db_info.root_version.children_tree)
 
 
+def edit_config():
+    old_configs = {}
+    for c in Config.select():
+        old_configs[c.key] = c.value
+    with NamedTemporaryFile(buffering=0, suffix='.myvc_cfg', delete=False) as temp_cfg_file:
+        temp_cfg_file.write(
+            json.dumps(
+                old_configs, ensure_ascii=False, indent=2
+            ).encode('utf8')
+        )
+
+    try:
+        editor = os.environ['EDITOR']
+    except KeyError:
+        editor = 'vim'
+    r = subprocess.call([editor, temp_cfg_file.name])
+    if r != 0:
+        raise RuntimeError('call editor failed, exit code: {}'.format(r))
+    with open(temp_cfg_file.name, 'rb') as f:
+        new_configs = json.load(f)
+        with DB.atomic():
+            for k, v in new_configs.items():
+                if k in old_configs:
+                    if v != old_configs[k]:
+                        c = Config.get(key=k)
+                        c.value = v
+                        c.save()
+                else:
+                    Config(
+                        key=k, value=v,
+                        create_at=datetime.datetime.now()
+                    ).save()
+            for k in set(old_configs.keys()) - set(new_configs.keys()):
+                Config.delete().where(Config.key == k)
+    os.remove(temp_cfg_file.name)
+
+
+def edit_mysql_conf():
+    with NamedTemporaryFile(buffering=0, suffix='.myvc_mysql_cnf', delete=False) as temp_cnf_file:
+        conf = MySQLConf.select().order_by(MySQLConf.id).first()  # type: MySQLConf
+        temp_cnf_file.write(conf.content.encode('utf8'))
+
+    try:
+        editor = os.environ['EDITOR']
+    except KeyError:
+        editor = 'vim'
+    r = subprocess.call([editor, temp_cnf_file.name])
+    if r != 0:
+        raise RuntimeError('call editor failed, exit code: {}'.format(r))
+    with open(temp_cnf_file.name, 'rb') as f:
+        conf.content = f.read().decode('utf8')
+        conf.save()
+    os.remove(temp_cnf_file.name)
+
+
 def select_commands(command_from_cmd_line=None):
     commands = OrderedDict({
         'ls': "show all existed db",
@@ -150,7 +211,9 @@ def select_commands(command_from_cmd_line=None):
         'rm branch': "delete a branch and it's children",
         'run sql': "execute a sql file",
         'reset db conf': "replace mysql conf by .cny files in config directory",
-        'db shell': "get mysql shell"
+        'db shell': "get mysql shell",
+        'edit config': "edit myvc configs",
+        'edit mysql conf': "edit mysql conf",
     })
     if command_from_cmd_line in commands:
         return command_from_cmd_line
@@ -244,6 +307,10 @@ def main():
     elif command == 'db shell':
         db_id = select_db(require_db_is_running=True)
         myvc_methods.db_shell(db_id)
+    elif command == 'edit config':
+        edit_config()
+    elif command == 'edit mysql conf':
+        edit_mysql_conf()
 
 
 if __name__ == '__main__':
