@@ -3,7 +3,7 @@
 # Created by CaoDa on 2021/7/14 09:55
 import pathlib
 
-DEBUG = True
+DEBUG = False
 USER_HOME_DIR = (
     pathlib.Path(__file__).parent.joinpath('debug_data') if DEBUG
     else pathlib.Path.home()
