@@ -106,9 +106,16 @@ def init_mysql_conf_volume(volume: Volume = None, conf_name: str = None) -> Volu
         detach=True, stdout=True, stderr=True, tty=True
     )
     container = get_container_by_name(temp_name)
+    cnf_file_name = '{}.cnf'.format(conf.name)
     with NamedTemporaryFile(buffering=0, suffix='.cnf') as cnf_file:
         cnf_file.write(conf.content.encode('utf8'))
-        send_file(container, cnf_file.name, '{}.cnf'.format(conf.name), '/etc/mysql/conf.d/')
+        send_file(container, cnf_file.name, cnf_file_name, '/etc/mysql/conf.d/')
+    container.exec_run(
+        "bash -c '{}'".format(
+            "chmod 644 /etc/mysql/conf.d/{0} && "
+            "chown root:root /etc/mysql/conf.d/{0}".format(cnf_file_name)
+        )
+    )
     container.stop()
     return volume
 
