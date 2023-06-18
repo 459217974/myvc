@@ -32,7 +32,7 @@ def get_mysql_image() -> Image:
     mysql_version = Config.get(key='MYSQL_VERSION')  # type: Config
     name = '{}:{}'.format(mysql_image_name.value, mysql_version.value)
     if not client.images.list(name=name):
-        client.images.pull(mysql_image_name.value, mysql_version.value)
+        client.images.pull(mysql_image_name.value, platform='linux/x86_64', tag=mysql_version.value)
     return client.images.get(name=name)
 
 
@@ -152,7 +152,7 @@ def clean_volume(volume: Volume):
 
 
 def init_container(db_info: DBInfo) -> Container:
-    if is_port_in_use(db_info.port):
+    if is_port_in_use(db_info.port, wait_seconds=3):
         raise Exception('the port {} is in use.'.format(db_info.port))
 
     image = get_mysql_image()
